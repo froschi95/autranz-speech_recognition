@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify, render_template, redirect
 import requests
 import os
+# import tempfile
+import speech_recognition as sr
 
 app = Flask(__name__)
 
@@ -16,28 +18,24 @@ def transcribe():
         return redirect(request.url)
     
     audio_file = request.files['file']
+    print(audio_file)
     if audio_file.filename == '':
         return redirect(request.url)
     
-    if audio_file:
-        # Set the API endpoint and your API key
-        api_endpoint = 'https://api.assemblyai.com/v2/transcript'
-        api_key = os.getenv("API_KEY")
-        
-        # Set the headers for the request
-        headers = {
-            'Content-Type': 'audio/wav',
-            'Authorization': f'Token {api_key}'
-        }
-        
-        # Send the POST request to the AssemblyAI API
-        response = requests.post(api_endpoint, headers=headers, data=audio_file)
-        
-        # Get the transcribed text from the response
-        transcribed_text = response.json()['text']
-    
-    # Return the transcribed text as a response
-    # return jsonify({'transcribed_text': transcribed_text})
+    if audio_file:   
+    # Load the audio file
+        r = sr.Recognizer()
+        with sr.AudioFile(audio_file) as source:
+            audio = r.record(source)
+
+        # Transcribe the audio
+        try:
+            text = r.recognize_google(audio)
+        except sr.UnknownValueError:
+            return "Could not understand audio"
+        except sr.RequestError as e:
+            return f"Error while transcribing: {e}"
+        transcribed_text = text
     return render_template('index.html', transcript=transcribed_text)
 
 
